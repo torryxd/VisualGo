@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class BoardController : MonoBehaviour
@@ -13,17 +14,49 @@ public class BoardController : MonoBehaviour
     [SerializeField]
     private Transform _cam;
 
-    public Dictionary<Vector2, Tile> tiles;
+    private Dictionary<Vector2, Tile> tiles;
+    private List<Tile> floodList;
 
 
     private void Start()
     {
-        GenerateGrid();
+        CreateBoard();
 
         turnType = TileType.Black;
     }
 
-    private void GenerateGrid()
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space)) // DEMO
+        {
+            List<Tile> groupTiles = new List<Tile>();
+
+            StartCoroutine(Flood(5, 5, TileType.White, groupTiles));
+            // TO DO: CAMBIAR ESTO A CONTROLAR LA FICHA INPUTADA Y LAS 4 DE ALREDEDOR
+
+            bool hasAnyLiberty = false;
+            foreach(Tile t in groupTiles)
+            {
+                if(t.hasLiberty)
+                    hasAnyLiberty = true;
+            }
+            if(!hasAnyLiberty)
+            {
+                foreach(Tile t in groupTiles)
+                {
+                    t.ChangeType(TileType.Liberty);
+                }
+            }
+            
+            foreach(Tile t in groupTiles)
+            {
+                t.tileChecked = false;
+                t.hasLiberty = false;
+            }
+        }
+    }
+
+    private void CreateBoard()
     {
         tiles = new Dictionary<Vector2, Tile>();
         for (int x = 0; x <= (size + 1); x++)
@@ -57,13 +90,86 @@ public class BoardController : MonoBehaviour
 
     public void NextTurn()
     {
-        if(turnType == TileType.Black)
+        if (turnType == TileType.Black)
         {
             turnType = TileType.White;
         }
-        else if(turnType == TileType.White)
+        else if (turnType == TileType.White)
         {
             turnType = TileType.Black;
         }
     }
+
+    public void ClickTile(Tile tile)
+    {
+        if (CanPlaceStone(tile))
+        {
+            tile.ChangeType(turnType);
+        }
+        else
+        {
+            Debug.Log("You can't place a stone here!");
+        }
+    }
+
+    public bool CanPlaceStone(Tile tile)
+    {
+        bool canPlaceStone = false;
+
+        //if (tile.type == TileType.Liberty && TileHasLiberty(tile)) //
+        //{
+            canPlaceStone = true;
+        //}
+
+        return canPlaceStone;
+    }
+
+    public bool TileHasLiberty(Tile tile)
+    {
+        bool hasLiberty = false;
+
+        Tile[] adjacentTiles =
+        {
+            tiles[new Vector2(tile.boardPos.x, tile.boardPos.y + 1)], // UP
+            tiles[new Vector2(tile.boardPos.x + 1, tile.boardPos.y)], // RIGHT
+            tiles[new Vector2(tile.boardPos.x, tile.boardPos.y - 1)], // DOWN
+            tiles[new Vector2(tile.boardPos.x - 1, tile.boardPos.y)]  // LEFT
+        };
+
+        foreach (Tile t in adjacentTiles)
+        {
+            if (t.type == TileType.Liberty)
+            {
+                hasLiberty = true;
+            }
+        }
+
+        return hasLiberty;
+    }
+
+    private IEnumerator Flood(int x, int y, TileType flowType, List<Tile> groupTiles)
+    {
+        if (x > 0 && x <= size && y > 0 && y <= size)
+        {
+            Tile t = tiles[new Vector2(x, y)];
+            if (t.type == flowType && !groupTiles.Contains(t))
+            {
+                if(TileHasLiberty(t))
+                    t.hasLiberty = true;
+                groupTiles.Add(t);
+
+                StartCoroutine(Flood(x + 1, y, flowType, groupTiles));
+                StartCoroutine(Flood(x, y + 1, flowType, groupTiles));
+                StartCoroutine(Flood(x - 1, y, flowType, groupTiles));
+                StartCoroutine(Flood(x, y - 1, flowType, groupTiles));
+            }
+
+            yield break;
+        }
+    }
+    private void Flood(Vector2 pos, TileType flowType, List<Tile> groupTiles)
+    {
+        StartCoroutine(Flood((int)pos.x, (int)pos.y, flowType, groupTiles));
+    }
+
 }

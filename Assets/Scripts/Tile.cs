@@ -5,15 +5,21 @@ using UnityEngine;
 
 public enum TileType
 {
-    Border      = -1,
-    Liberty     =  0,
-    Black       =  1,
-    White       =  2,
+    WhiteLiberty    =  -2,
+    BlackLiberty    =  -1,
+    Liberty         =   0,
+    Black           =   1,
+    White           =   2,
+    Border          =   8,
 }
+
+// CALCULAR 3 TIPOS DE GRUPO BLANCAS, NEGRAS, LIBERTADES BLANCAS, LIBERTADES NEGRAS || SI DENTRO DE UN GRUPO DE LIBERTADES NEGRAS HAY UNA LIBERTAD BLANCA, PARA DE SER GRUPO?
 
 public class Tile : MonoBehaviour
 {
     public TileType type;
+    public bool hasLiberty;
+    public bool tileChecked;
 
     [SerializeField]
     private GameObject _highlight;
@@ -23,18 +29,22 @@ public class Tile : MonoBehaviour
     private Transform _tilesParent;
     [SerializeField]
     private Transform _outBordersParent;
+    [SerializeField]
+    private Collider _clickCollider;
+
+    [HideInInspector]
+    public Vector2 boardPos;
 
     private BoardController _board;
-    private Vector2 _boardPos;
 
 
     public void Init(BoardController board, Vector2 boardPos)
     {
         _board = board;
-        _boardPos = boardPos;
+        this.boardPos = boardPos;
 
         CheckTileBorder();
-        PlaceStone();
+        ChangeType(type);
     }
 
     private void OnMouseEnter()
@@ -49,51 +59,40 @@ public class Tile : MonoBehaviour
 
     private void OnMouseDown()
     {
-        if(PlaceStone())
-        {
-            _board.NextTurn();
-        }
+        _board.ClickTile(this);
     }
 
-    public bool PlaceStone()
+    public void ChangeType(TileType tileType)
     {
-        bool nextTurn = false;
+        type = tileType;
 
-        if(type == TileType.Black || type == TileType.White)
+        for (int i = -2; i <= 2; i++)
         {
-            type = TileType.Liberty;
+            _stonesParent.GetChild(i+2).gameObject.SetActive(i == (int)tileType);
         }
-        else if (type == TileType.Liberty)
-        {
-            type = _board.turnType;
-            nextTurn = true;
-        }
-
-        for (int i = 0; i <= 2; i++)
-        {
-            _stonesParent.GetChild(i).gameObject.SetActive(i == (int)type);
-        }
-
-        return nextTurn;
     }
 
     private void CheckTileBorder()
     {
-        if (_boardPos.x > _board.size || _boardPos.y > _board.size || _boardPos.x < 1 || _boardPos.y < 1)
+        if (boardPos.x > _board.size || boardPos.y > _board.size || boardPos.x < 1 || boardPos.y < 1)
         {
             type = TileType.Border;
-            int borderPosition = GetOutBorderPosition(_boardPos, 0, _board.size + 1);
+
+            int borderPosition = GetOutBorderPosition(boardPos, 0, _board.size + 1);
             for (int i = 1; i <= 9; i++)
             {
                 _outBordersParent.GetChild(i - 1).gameObject.SetActive(i == borderPosition);
             }
+
+            Destroy(_clickCollider);
         }
         else
         {
             type = TileType.Liberty;
+
             _outBordersParent.gameObject.SetActive(false);
 
-            int tilePosition = GetOutBorderPosition(_boardPos, 1, _board.size);
+            int tilePosition = GetOutBorderPosition(boardPos, 1, _board.size);
             for (int i = 1; i <= 9; i++)
             {
                 _tilesParent.GetChild(i - 1).gameObject.SetActive(i == tilePosition);
