@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -29,7 +31,7 @@ public class Tile : MonoBehaviour
     [SerializeField]
     private Transform _outBordersParent;
     [SerializeField]
-    private Collider _clickCollider;
+    private Collider2D _clickCollider;
 
     [HideInInspector]
     public Vector2 boardPos;
@@ -91,8 +93,17 @@ public class Tile : MonoBehaviour
 
             _outBordersParent.gameObject.SetActive(false);
 
-            int tilePosition = GetOutBorderPosition(boardPos, 1, _board.size);
-            for (int i = 1; i <= 9; i++)
+            int tilePosition;
+            if(CheckHoshi(_board.size, boardPos))
+            {
+                tilePosition = 10;
+            }
+            else
+            {
+                tilePosition = GetOutBorderPosition(boardPos, 1, _board.size);
+            }
+
+            for (int i = 1; i <= 10; i++)
             {
                 _tilesParent.GetChild(i - 1).gameObject.SetActive(i == tilePosition);
             }
@@ -132,5 +143,18 @@ public class Tile : MonoBehaviour
             else
                 return 5;
         }
+    }
+
+    Vector2[] hoshiPoints9 = {new Vector2(3,3), new Vector2(3,7), new Vector2(5,5), new Vector2(7,3), new Vector2(7,7)};
+    private bool CheckHoshi(int boardSize, Vector2 pos)
+    {
+        if(boardSize == 9)
+        {
+            if(!hoshiPoints9.Contains(pos))
+                Debug.Log(pos);
+            return hoshiPoints9.Contains(pos);
+        }
+
+        return false;
     }
 }
