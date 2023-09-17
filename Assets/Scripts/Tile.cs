@@ -5,8 +5,8 @@ using UnityEngine;
 
 public enum TileType
 {
-    WhiteLiberty    =  -2,
-    BlackLiberty    =  -1,
+    //WhiteLiberty    =  -2,
+    //BlackLiberty    =  -1,
     Liberty         =   0,
     Black           =   1,
     White           =   2,
@@ -19,7 +19,6 @@ public class Tile : MonoBehaviour
 {
     public TileType type;
     public bool hasLiberty;
-    public bool tileChecked;
 
     [SerializeField]
     private GameObject _highlight;
