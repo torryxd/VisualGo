@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class BoardController : MonoBehaviour
 {
@@ -16,6 +17,9 @@ public class BoardController : MonoBehaviour
 
     private Dictionary<Vector2, Tile> tiles;
     private List<Tile> turnCapturedTiles = new List<Tile>();
+
+    //private List<Dictionary<Vector2, TileType>> tileMaps = new List<Dictionary<Vector2, TileType>>();
+    Dictionary<Vector2, TileType> tileMap = new Dictionary<Vector2, TileType>();
 
 
     private void Start()
@@ -74,7 +78,9 @@ public class BoardController : MonoBehaviour
 
     private void PlaceAndDrawStone(Tile tile)
     {
-        if (PlaceStone(tile))
+        string placeStoneError = PlaceStone(tile);
+
+        if (placeStoneError == string.Empty)
         {
             //CAMBIAR SPRITES
             tile.ChangeType(turnType);
@@ -86,21 +92,28 @@ public class BoardController : MonoBehaviour
                 {
                     t.ChangeType(TileType.Liberty);
                 }
-                turnCapturedTiles.Clear();
             }
         }
         else
         {
-            Debug.Log("You can't place a stone here!");
+            Debug.Log(placeStoneError);
         }
+        
+        turnCapturedTiles?.Clear();
     }
 
-    public bool PlaceStone(Tile tile)
+    public string PlaceStone(Tile tile)
     {
-        if(tile.type != TileType.Liberty)
-            return false;
+        Dictionary<Vector2, TileType> lastTileMap = tileMap;
 
-        bool canPlaceStone = false;
+        Dictionary<Vector2, TileType> actualTileMap = new Dictionary<Vector2, TileType>();
+        foreach(KeyValuePair<Vector2, Tile> t in tiles)
+        {
+            actualTileMap[t.Key] = t.Value.type;
+        }
+
+        if(tile.type != TileType.Liberty)
+            return "You need to place a stone on a empty space!";
 
         tile.type = turnType;
 
@@ -120,16 +133,50 @@ public class BoardController : MonoBehaviour
             }
         }
         
-        if (turnCapturedTiles?.Count > 0 || TilesHaveLiberties(tile, turnType)) //
+        if (turnCapturedTiles?.Count > 0 || TilesHaveLiberties(tile, turnType)) // Si se captura alguna alrededor o tiene espacio
         {
-            canPlaceStone = true;
+            Dictionary<Vector2, TileType> newTileMap = new Dictionary<Vector2, TileType>();
+            foreach(KeyValuePair<Vector2, Tile> t in tiles)
+            {
+                newTileMap[t.Key] = turnCapturedTiles.Contains(tiles[t.Key]) ? TileType.Liberty : t.Value.type;
+            }
+
+            bool equalTileMaps = true;
+            foreach(KeyValuePair<Vector2, TileType> t in newTileMap)
+            {
+                if(lastTileMap.ContainsKey(t.Key))
+                {
+                    if(t.Value != lastTileMap[t.Key])
+                    {
+                        equalTileMaps = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    equalTileMaps = false;
+                    break;
+                }
+            }
+
+            if(equalTileMaps) // KO RULE
+            {
+                tile.type = TileType.Liberty;
+                return "KO: You can't repeat a previous position!";
+            }
+            else
+            {
+                tileMap = actualTileMap;
+                Debug.Log("Placed stone");
+                
+                return string.Empty;
+            }
         }
         else
         {
             tile.type = TileType.Liberty;
+            return "Suicidal moves are not permitted!";
         }
-
-        return canPlaceStone;
     }
 
     public bool TileHasLiberty(Tile tile)
@@ -176,7 +223,7 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        Debug.Log(tile.boardPos + " " + hasAnyLiberty);
+        //Debug.Log(tile.boardPos + " " + hasAnyLiberty);
         
         foreach(Tile t in groupTiles) // Reset has liberty for next group
         {
@@ -197,10 +244,10 @@ public class BoardController : MonoBehaviour
                     t.hasLiberty = true;
                 groupTiles.Add(t);
 
-                Flood(x + 1, y, flowType, groupTiles);
-                Flood(x, y + 1, flowType, groupTiles);
-                Flood(x - 1, y, flowType, groupTiles);
-                Flood(x, y - 1, flowType, groupTiles);
+                Flood(x, y + 1, flowType, groupTiles); // UP
+                Flood(x + 1, y, flowType, groupTiles); // RIGHT
+                Flood(x, y - 1, flowType, groupTiles); // DOWN
+                Flood(x - 1, y, flowType, groupTiles); // LEFT
             }
         }
     }
