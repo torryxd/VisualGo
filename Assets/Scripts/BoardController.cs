@@ -50,13 +50,6 @@ public class BoardController : MonoBehaviour
         _cam.transform.position = new Vector3((float)size / 2 + 0.5f, (float)size / 2 + 0.5f, -10);
     }
 
-    public Tile GetTileAtPosition(Vector2 pos)
-    {
-        if (tiles.TryGetValue(pos, out var tile))
-            return tile;
-        return null;
-    }
-
     public char NumberToLetter(int i)
     {
         return Convert.ToChar(64 + i);
@@ -76,9 +69,25 @@ public class BoardController : MonoBehaviour
 
     public void ClickTile(Tile tile)
     {
+        PlaceAndDrawStone(tile);
+    }
+
+    private void PlaceAndDrawStone(Tile tile)
+    {
         if (PlaceStone(tile))
         {
+            //CAMBIAR SPRITES
             tile.ChangeType(turnType);
+        
+            //CAPTURED STONES
+            if(turnCapturedTiles?.Count > 0)
+            {
+                foreach(Tile t in turnCapturedTiles)
+                {
+                    t.ChangeType(TileType.Liberty);
+                }
+                turnCapturedTiles.Clear();
+            }
         }
         else
         {
@@ -114,24 +123,11 @@ public class BoardController : MonoBehaviour
         if (turnCapturedTiles?.Count > 0 || TilesHaveLiberties(tile, turnType)) //
         {
             canPlaceStone = true;
-
-            if(turnCapturedTiles?.Count > 0)
-            {
-                foreach(Tile t in turnCapturedTiles)
-                {
-                    t.ChangeType(TileType.Liberty);
-                }
-            }
         }
         else
         {
             tile.type = TileType.Liberty;
         }
-        
-        turnCapturedTiles.Clear();
-
-        if(canPlaceStone)
-            tile.ChangeType(turnType);
 
         return canPlaceStone;
     }
@@ -163,8 +159,7 @@ public class BoardController : MonoBehaviour
     {
         List<Tile> groupTiles = new List<Tile>();
 
-        StartCoroutine(Flood((int)tile.boardPos.x, (int)tile.boardPos.y, floodType, groupTiles));
-        // TO DO: CAMBIAR ESTO A CONTROLAR LA FICHA INPUTADA Y LAS 4 DE ALREDEDOR
+        Flood((int)tile.boardPos.x, (int)tile.boardPos.y, floodType, groupTiles);
 
         bool hasAnyLiberty = false;
         foreach(Tile t in groupTiles)
@@ -191,7 +186,7 @@ public class BoardController : MonoBehaviour
         return hasAnyLiberty;
     }
 
-    private IEnumerator Flood(int x, int y, TileType flowType, List<Tile> groupTiles)
+    private void Flood(int x, int y, TileType flowType, List<Tile> groupTiles)
     {
         if (x > 0 && x <= size && y > 0 && y <= size)
         {
@@ -202,18 +197,12 @@ public class BoardController : MonoBehaviour
                     t.hasLiberty = true;
                 groupTiles.Add(t);
 
-                StartCoroutine(Flood(x + 1, y, flowType, groupTiles));
-                StartCoroutine(Flood(x, y + 1, flowType, groupTiles));
-                StartCoroutine(Flood(x - 1, y, flowType, groupTiles));
-                StartCoroutine(Flood(x, y - 1, flowType, groupTiles));
+                Flood(x + 1, y, flowType, groupTiles);
+                Flood(x, y + 1, flowType, groupTiles);
+                Flood(x - 1, y, flowType, groupTiles);
+                Flood(x, y - 1, flowType, groupTiles);
             }
-
-            yield break;
         }
-    }
-    private void Flood(Vector2 pos, TileType flowType, List<Tile> groupTiles)
-    {
-        StartCoroutine(Flood((int)pos.x, (int)pos.y, flowType, groupTiles));
     }
 
 }
