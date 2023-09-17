@@ -15,7 +15,7 @@ public class BoardController : MonoBehaviour
     private Transform _cam;
 
     private Dictionary<Vector2, Tile> tiles;
-    private List<Tile> floodList;
+    private List<Tile> turnCapturedTiles = new List<Tile>();
 
 
     private void Start()
@@ -27,33 +27,7 @@ public class BoardController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space)) // DEMO
-        {
-            List<Tile> groupTiles = new List<Tile>();
-
-            StartCoroutine(Flood(5, 5, TileType.White, groupTiles));
-            // TO DO: CAMBIAR ESTO A CONTROLAR LA FICHA INPUTADA Y LAS 4 DE ALREDEDOR
-
-            bool hasAnyLiberty = false;
-            foreach(Tile t in groupTiles)
-            {
-                if(t.hasLiberty)
-                    hasAnyLiberty = true;
-            }
-            if(!hasAnyLiberty)
-            {
-                foreach(Tile t in groupTiles)
-                {
-                    t.ChangeType(TileType.Liberty);
-                }
-            }
-            
-            foreach(Tile t in groupTiles)
-            {
-                t.tileChecked = false;
-                t.hasLiberty = false;
-            }
-        }
+        
     }
 
     private void CreateBoard()
@@ -76,13 +50,6 @@ public class BoardController : MonoBehaviour
         _cam.transform.position = new Vector3((float)size / 2 + 0.5f, (float)size / 2 + 0.5f, -10);
     }
 
-    public Tile GetTileAtPosition(Vector2 pos)
-    {
-        if (tiles.TryGetValue(pos, out var tile))
-            return tile;
-        return null;
-    }
-
     public char NumberToLetter(int i)
     {
         return Convert.ToChar(64 + i);
@@ -102,9 +69,25 @@ public class BoardController : MonoBehaviour
 
     public void ClickTile(Tile tile)
     {
-        if (CanPlaceStone(tile))
+        PlaceAndDrawStone(tile);
+    }
+
+    private void PlaceAndDrawStone(Tile tile)
+    {
+        if (PlaceStone(tile))
         {
+            //CAMBIAR SPRITES
             tile.ChangeType(turnType);
+        
+            //CAPTURED STONES
+            if(turnCapturedTiles?.Count > 0)
+            {
+                foreach(Tile t in turnCapturedTiles)
+                {
+                    t.ChangeType(TileType.Liberty);
+                }
+                turnCapturedTiles.Clear();
+            }
         }
         else
         {
@@ -112,14 +95,39 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    public bool CanPlaceStone(Tile tile)
+    public bool PlaceStone(Tile tile)
     {
+        if(tile.type != TileType.Liberty)
+            return false;
+
         bool canPlaceStone = false;
 
-        //if (tile.type == TileType.Liberty && TileHasLiberty(tile)) //
-        //{
+        tile.type = turnType;
+
+        Tile[] adjacentTiles =
+        {
+            tiles[new Vector2(tile.boardPos.x, tile.boardPos.y + 1)], // UP
+            tiles[new Vector2(tile.boardPos.x + 1, tile.boardPos.y)], // RIGHT
+            tiles[new Vector2(tile.boardPos.x, tile.boardPos.y - 1)], // DOWN
+            tiles[new Vector2(tile.boardPos.x - 1, tile.boardPos.y)]  // LEFT
+        };
+        foreach(Tile t in adjacentTiles)
+        {
+            if((turnType == TileType.White && t.type == TileType.Black)
+            || (turnType == TileType.Black && t.type == TileType.White))
+            {
+                TilesHaveLiberties(t, t.type);
+            }
+        }
+        
+        if (turnCapturedTiles?.Count > 0 || TilesHaveLiberties(tile, turnType)) //
+        {
             canPlaceStone = true;
-        //}
+        }
+        else
+        {
+            tile.type = TileType.Liberty;
+        }
 
         return canPlaceStone;
     }
@@ -147,7 +155,38 @@ public class BoardController : MonoBehaviour
         return hasLiberty;
     }
 
-    private IEnumerator Flood(int x, int y, TileType flowType, List<Tile> groupTiles)
+    private bool TilesHaveLiberties(Tile tile, TileType floodType)
+    {
+        List<Tile> groupTiles = new List<Tile>();
+
+        Flood((int)tile.boardPos.x, (int)tile.boardPos.y, floodType, groupTiles);
+
+        bool hasAnyLiberty = false;
+        foreach(Tile t in groupTiles)
+        {
+            if(t.hasLiberty)
+                hasAnyLiberty = true;
+        }
+
+        if(!hasAnyLiberty)
+        {
+            foreach(Tile t in groupTiles)
+            {
+                turnCapturedTiles.Add(t);
+            }
+        }
+
+        Debug.Log(tile.boardPos + " " + hasAnyLiberty);
+        
+        foreach(Tile t in groupTiles) // Reset has liberty for next group
+        {
+            t.hasLiberty = false;
+        }
+
+        return hasAnyLiberty;
+    }
+
+    private void Flood(int x, int y, TileType flowType, List<Tile> groupTiles)
     {
         if (x > 0 && x <= size && y > 0 && y <= size)
         {
@@ -158,18 +197,12 @@ public class BoardController : MonoBehaviour
                     t.hasLiberty = true;
                 groupTiles.Add(t);
 
-                StartCoroutine(Flood(x + 1, y, flowType, groupTiles));
-                StartCoroutine(Flood(x, y + 1, flowType, groupTiles));
-                StartCoroutine(Flood(x - 1, y, flowType, groupTiles));
-                StartCoroutine(Flood(x, y - 1, flowType, groupTiles));
+                Flood(x + 1, y, flowType, groupTiles);
+                Flood(x, y + 1, flowType, groupTiles);
+                Flood(x - 1, y, flowType, groupTiles);
+                Flood(x, y - 1, flowType, groupTiles);
             }
-
-            yield break;
         }
-    }
-    private void Flood(Vector2 pos, TileType flowType, List<Tile> groupTiles)
-    {
-        StartCoroutine(Flood((int)pos.x, (int)pos.y, flowType, groupTiles));
     }
 
 }
