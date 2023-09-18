@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class BoardController : MonoBehaviour
 {
@@ -14,6 +15,10 @@ public class BoardController : MonoBehaviour
     private Transform _cam;
     [SerializeField]
     private SavesLoader _savesLoader;
+    [SerializeField]
+    private CursorController _cursor;
+    [SerializeField]
+    private Image[] _turnIndicator;
 
     [HideInInspector]
     public Dictionary<Vector2, Tile> tiles;
@@ -47,7 +52,7 @@ public class BoardController : MonoBehaviour
         if(givenSize != 0)
             size = givenSize;
 
-        turnType = TileType.Black;
+        NextTurn(true);
 
         ResetGrid();
 
@@ -68,21 +73,32 @@ public class BoardController : MonoBehaviour
         _cam.transform.position = new Vector3((float)size / 2 + 0.5f, (float)size / 2 + 0.5f, -10);
     }
 
-    public void NextTurn()
-    {
-        if (turnType == TileType.Black)
-        {
-            turnType = TileType.White;
-        }
-        else if (turnType == TileType.White)
-        {
-            turnType = TileType.Black;
-        }
-    }
-
     public void ClickTile(Tile tile)
     {
-        PlaceAndDrawStone(tile, turnType);
+        _cursor.targetTile = tile;
+        _cursor.ClickAnimation();
+    }
+
+    public void Confirm()
+    {
+        PlaceAndDrawStone(_cursor.targetTile, turnType);
+        _cursor.HideCursor();
+    }
+
+    private void NextTurn(bool firstTime = false)
+    {
+        if (turnType == TileType.White || firstTime)
+        {
+            turnType = TileType.Black;
+            _turnIndicator[0].gameObject.SetActive(true);
+            _turnIndicator[1].gameObject.SetActive(false);
+        }
+        else if (turnType == TileType.Black)
+        {
+            turnType = TileType.White;
+            _turnIndicator[0].gameObject.SetActive(false);
+            _turnIndicator[1].gameObject.SetActive(true);
+        }
     }
 
     public void PlaceAndDrawStone(Tile tile, TileType moveType, bool drawSprites = true)
@@ -112,12 +128,13 @@ public class BoardController : MonoBehaviour
                     t.type = TileType.Liberty;
                 }
             }
-
+            NextTurn();
             _savesLoader.AddMoveToSave(tile.type, tile.boardPos);
         }
         else
         {
             Debug.Log(placeStoneError);
+            _cursor.ClickAnimationDeny();
         }
 
         turnCapturedTiles?.Clear();
@@ -305,5 +322,4 @@ public class BoardController : MonoBehaviour
 
         return colindantTiles;
     }
-
 }

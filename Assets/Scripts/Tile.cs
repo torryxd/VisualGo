@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public enum TileType
@@ -21,6 +22,7 @@ public class TileSprites
     public SpriteRenderer house;
     public SpriteRenderer bridgeDown, bridgeLeft, bridgeRight;
     public SpriteRenderer pathUL, pathUR, pathDL, pathDR;
+    public SpriteRenderer[] escombros;
 }
 
 // CALCULAR 3 TIPOS DE GRUPO BLANCAS, NEGRAS, LIBERTADES BLANCAS, LIBERTADES NEGRAS || SI DENTRO DE UN GRUPO DE LIBERTADES NEGRAS HAY UNA LIBERTAD BLANCA, PARA DE SER GRUPO?
@@ -30,8 +32,6 @@ public class Tile : MonoBehaviour
     public TileType type;
     public bool hasLiberty;
 
-    [SerializeField]
-    private GameObject _highlight;
     [SerializeField]
     private Transform _tilesParent;
     [SerializeField]
@@ -57,12 +57,12 @@ public class Tile : MonoBehaviour
 
     private void OnMouseEnter()
     {
-        _highlight.SetActive(true);
+        
     }
 
     private void OnMouseExit()
     {
-        _highlight.SetActive(false);
+        
     }
 
     private void OnMouseDown()
@@ -72,17 +72,15 @@ public class Tile : MonoBehaviour
 
     public void ChangeType(TileType tileType)
     {
+        TileType lastType = type;
         type = tileType;
-
-        // 1 2 3
-        // 4 5 6
-        // 7 8 9
 
         Tile[] colindantTiles = _board.GetColindantTiles(this);
         foreach (Tile t in colindantTiles)
         {
             t?.UpdateSprites(t);
         }
+        UpdateEscombros(this, lastType);
     }
 
     private void CheckTileBorder()
@@ -176,6 +174,25 @@ public class Tile : MonoBehaviour
         }
 
         return false;
+    }
+
+    private void UpdateEscombros(Tile t, TileType lastType)
+    {
+        if(t.type == TileType.Liberty && lastType != TileType.Liberty)
+        {
+            for (int i = 0; i <= 1; i++)
+            {
+                t.sprites[(int)lastType].escombros[i].enabled = t.boardPos.x % 2 == i;
+                t.sprites[(int)lastType].escombros[i].flipX = t.boardPos.y % 2 == i;
+            }
+        }
+        else
+        {
+            t.sprites[0].escombros[0].enabled = false;
+            t.sprites[0].escombros[1].enabled = false;
+            t.sprites[1].escombros[0].enabled = false;
+            t.sprites[1].escombros[1].enabled = false;
+        }
     }
 
     public void UpdateSprites(Tile t)
