@@ -1,6 +1,6 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class BoardController : MonoBehaviour
@@ -12,35 +12,51 @@ public class BoardController : MonoBehaviour
     private Tile _tilePrefab;
     [SerializeField]
     private Transform _cam;
+    [SerializeField]
+    private SavesLoader _savesLoader;
 
-    private Dictionary<Vector2, Tile> tiles;
-    private List<Tile> turnCapturedTiles = new List<Tile>();
+    [HideInInspector]
+    public Dictionary<Vector2, Tile> tiles;
+    private List<Tile> turnCapturedTiles;
 
     //private List<Dictionary<Vector2, TileType>> tileMaps = new List<Dictionary<Vector2, TileType>>();
-    Dictionary<Vector2, TileType> tileMap = new Dictionary<Vector2, TileType>();
+    Dictionary<Vector2, TileType> tileMap;
 
 
     private void Start()
     {
         CreateBoard();
+    }
+
+    private void ResetGrid()
+    {
+        if(tiles != null)
+        {
+            foreach(Tile tile in tiles.Values)
+            {
+                Destroy(tile.gameObject);
+            }
+        }
+        tiles = new Dictionary<Vector2, Tile>();
+        turnCapturedTiles = new List<Tile>();
+        tileMap = new Dictionary<Vector2, TileType>();
+    }
+
+    public void CreateBoard(int givenSize = 0)
+    {
+        if(givenSize != 0)
+            size = givenSize;
 
         turnType = TileType.Black;
-    }
 
-    private void Update()
-    {
-        
-    }
+        ResetGrid();
 
-    private void CreateBoard()
-    {
-        tiles = new Dictionary<Vector2, Tile>();
         for (int x = 0; x <= (size + 1); x++)
         {
             for (int y = 0; y <= (size + 1); y++)
             {
                 var spawnedTile = Instantiate(_tilePrefab, new Vector3(x, y), Quaternion.identity);
-                spawnedTile.name = $"Tile[{NumberToLetter(x)},{NumberToLetter(y)}]";
+                spawnedTile.name = $"Tile[{x},{y}]";
 
                 Vector2 boardPosition = new Vector2(x, y);
                 tiles[boardPosition] = spawnedTile;
@@ -50,11 +66,6 @@ public class BoardController : MonoBehaviour
         }
 
         _cam.transform.position = new Vector3((float)size / 2 + 0.5f, (float)size / 2 + 0.5f, -10);
-    }
-
-    public char NumberToLetter(int i)
-    {
-        return Convert.ToChar(64 + i);
     }
 
     public void NextTurn()
@@ -71,49 +82,61 @@ public class BoardController : MonoBehaviour
 
     public void ClickTile(Tile tile)
     {
-        PlaceAndDrawStone(tile);
+        PlaceAndDrawStone(tile, turnType);
     }
 
-    private void PlaceAndDrawStone(Tile tile)
+    public void PlaceAndDrawStone(Tile tile, TileType moveType, bool drawSprites = true)
     {
-        string placeStoneError = PlaceStone(tile);
+        string placeStoneError = CanPlaceStone(tile, moveType);
 
         if (placeStoneError == string.Empty)
         {
-            //CAMBIAR SPRITES
-            tile.ChangeType(turnType);
-        
-            //CAPTURED STONES
-            if(turnCapturedTiles?.Count > 0)
+            if (drawSprites)
             {
-                foreach(Tile t in turnCapturedTiles)
+                tile.ChangeType(moveType);
+
+                if (turnCapturedTiles?.Count > 0)
                 {
-                    t.ChangeType(TileType.Liberty);
+                    foreach (Tile t in turnCapturedTiles)
+                    {
+                        t.ChangeType(TileType.Liberty);
+                    }
                 }
             }
+            else
+            {
+                tile.type = moveType;
+
+                foreach (Tile t in turnCapturedTiles)
+                {
+                    t.type = TileType.Liberty;
+                }
+            }
+
+            _savesLoader.AddMoveToSave(tile.type, tile.boardPos);
         }
         else
         {
             Debug.Log(placeStoneError);
         }
-        
+
         turnCapturedTiles?.Clear();
     }
 
-    public string PlaceStone(Tile tile)
+    public string CanPlaceStone(Tile tile, TileType moveType)
     {
         Dictionary<Vector2, TileType> lastTileMap = tileMap;
 
         Dictionary<Vector2, TileType> actualTileMap = new Dictionary<Vector2, TileType>();
-        foreach(KeyValuePair<Vector2, Tile> t in tiles)
+        foreach (KeyValuePair<Vector2, Tile> t in tiles)
         {
             actualTileMap[t.Key] = t.Value.type;
         }
 
-        if(tile.type != TileType.Liberty)
+        if (tile.type != TileType.Liberty)
             return "You need to place a stone on a empty space!";
 
-        tile.type = turnType;
+        tile.type = moveType;
 
         Tile[] adjacentTiles =
         {
@@ -122,29 +145,29 @@ public class BoardController : MonoBehaviour
             tiles[new Vector2(tile.boardPos.x, tile.boardPos.y - 1)], // DOWN
             tiles[new Vector2(tile.boardPos.x - 1, tile.boardPos.y)]  // LEFT
         };
-        foreach(Tile t in adjacentTiles)
+        foreach (Tile t in adjacentTiles)
         {
-            if((turnType == TileType.White && t.type == TileType.Black)
-            || (turnType == TileType.Black && t.type == TileType.White))
+            if ((moveType == TileType.White && t.type == TileType.Black)
+            || (moveType == TileType.Black && t.type == TileType.White))
             {
                 TilesHaveLiberties(t, t.type);
             }
         }
-        
-        if (turnCapturedTiles?.Count > 0 || TilesHaveLiberties(tile, turnType)) // Si se captura alguna alrededor o tiene espacio
+
+        if (turnCapturedTiles?.Count > 0 || TilesHaveLiberties(tile, moveType)) // Si se captura alguna alrededor o tiene espacio
         {
             Dictionary<Vector2, TileType> newTileMap = new Dictionary<Vector2, TileType>();
-            foreach(KeyValuePair<Vector2, Tile> t in tiles)
+            foreach (KeyValuePair<Vector2, Tile> t in tiles)
             {
                 newTileMap[t.Key] = turnCapturedTiles.Contains(tiles[t.Key]) ? TileType.Liberty : t.Value.type;
             }
 
             bool equalTileMaps = true;
-            foreach(KeyValuePair<Vector2, TileType> t in newTileMap)
+            foreach (KeyValuePair<Vector2, TileType> t in newTileMap)
             {
-                if(lastTileMap.ContainsKey(t.Key))
+                if (lastTileMap.ContainsKey(t.Key))
                 {
-                    if(t.Value != lastTileMap[t.Key])
+                    if (t.Value != lastTileMap[t.Key])
                     {
                         equalTileMaps = false;
                         break;
@@ -157,7 +180,7 @@ public class BoardController : MonoBehaviour
                 }
             }
 
-            if(equalTileMaps) // KO RULE
+            if (equalTileMaps) // KO RULE
             {
                 tile.type = TileType.Liberty;
                 return "KO: You can't repeat a previous position!";
@@ -165,8 +188,7 @@ public class BoardController : MonoBehaviour
             else
             {
                 tileMap = actualTileMap;
-                Debug.Log("Placed stone");
-                
+
                 return string.Empty;
             }
         }
@@ -207,23 +229,23 @@ public class BoardController : MonoBehaviour
         Flood((int)tile.boardPos.x, (int)tile.boardPos.y, floodType, groupTiles);
 
         bool hasAnyLiberty = false;
-        foreach(Tile t in groupTiles)
+        foreach (Tile t in groupTiles)
         {
-            if(t.hasLiberty)
+            if (t.hasLiberty)
                 hasAnyLiberty = true;
         }
 
-        if(!hasAnyLiberty)
+        if (!hasAnyLiberty)
         {
-            foreach(Tile t in groupTiles)
+            foreach (Tile t in groupTiles)
             {
                 turnCapturedTiles.Add(t);
             }
         }
 
         //Debug.Log(tile.boardPos + " " + hasAnyLiberty);
-        
-        foreach(Tile t in groupTiles) // Reset has liberty for next group
+
+        foreach (Tile t in groupTiles) // Reset has liberty for next group
         {
             t.hasLiberty = false;
         }
@@ -238,7 +260,7 @@ public class BoardController : MonoBehaviour
             Tile t = tiles[new Vector2(x, y)];
             if (t.type == flowType && !groupTiles.Contains(t))
             {
-                if(TileHasLiberty(t))
+                if (TileHasLiberty(t))
                     t.hasLiberty = true;
                 groupTiles.Add(t);
 
@@ -271,7 +293,7 @@ public class BoardController : MonoBehaviour
         Tile[] colindantTiles = new Tile[9];
         for (int i = 0; i < colindantTiles.Length; i++)
         {
-            if(tiles.ContainsKey(adjacentTiles[i]))
+            if (tiles.ContainsKey(adjacentTiles[i]))
             {
                 colindantTiles[i] = tiles[adjacentTiles[i]];
             }

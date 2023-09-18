@@ -5,12 +5,12 @@ using UnityEngine;
 
 public enum TileType
 {
-    Liberty         =   -1,
-    Black           =   0,
-    White           =   1,
+    Liberty = -1,
+    Black = 0,
+    White = 1,
     //WhiteLiberty    =  2,
     //BlackLiberty    =  3,
-    Border          =   8,
+    Border = 8,
 }
 
 [System.Serializable]
@@ -73,13 +73,13 @@ public class Tile : MonoBehaviour
     public void ChangeType(TileType tileType)
     {
         type = tileType;
-        
+
         // 1 2 3
         // 4 5 6
         // 7 8 9
 
         Tile[] colindantTiles = _board.GetColindantTiles(this);
-        foreach(Tile t in colindantTiles)
+        foreach (Tile t in colindantTiles)
         {
             t?.UpdateSprites(t);
         }
@@ -106,7 +106,7 @@ public class Tile : MonoBehaviour
             _outBordersParent.gameObject.SetActive(false);
 
             int tilePosition;
-            if(CheckHoshi(_board.size, boardPos))
+            if (CheckHoshi(_board.size, boardPos))
             {
                 tilePosition = 10;
             }
@@ -157,20 +157,28 @@ public class Tile : MonoBehaviour
         }
     }
 
-    Vector2[] hoshiPoints9 = {new Vector2(3,3), new Vector2(3,7), new Vector2(5,5), new Vector2(7,3), new Vector2(7,7)};
+    Vector2[] hoshiPoints9 = { new Vector2(3, 3), new Vector2(3, 7), new Vector2(5, 5), new Vector2(7, 3), new Vector2(7, 7) };
+    Vector2[] hoshiPoints13 = { new Vector2(4, 4), new Vector2(4, 10), new Vector2(7, 7), new Vector2(10, 4), new Vector2(10, 10) };
+    Vector2[] hoshiPoints19 = { new Vector2(4, 4), new Vector2(4, 10), new Vector2(4, 16), new Vector2(10, 4), new Vector2(10, 10), new Vector2(10, 16), new Vector2(16, 4), new Vector2(16, 10) , new Vector2(16, 16) };
     private bool CheckHoshi(int boardSize, Vector2 pos)
     {
-        if(boardSize == 9)
+        if (boardSize == 9)
         {
-            if(!hoshiPoints9.Contains(pos))
-                Debug.Log(pos);
             return hoshiPoints9.Contains(pos);
+        }
+        else if (boardSize == 13)
+        {
+            return hoshiPoints13.Contains(pos);
+        }
+        else if (boardSize == 19)
+        {
+            return hoshiPoints19.Contains(pos);
         }
 
         return false;
     }
 
-    private void UpdateSprites(Tile t)
+    public void UpdateSprites(Tile t)
     {
         foreach (TileSprites tileSprites in sprites)
         {
@@ -186,59 +194,59 @@ public class Tile : MonoBehaviour
             tileSprites.house.enabled = false;
         }
 
-        if(type == TileType.Black || type == TileType.White)
+        if (type == TileType.Black || type == TileType.White)
         {
             Tile[] colindantTiles = _board.GetColindantTiles(t);
             int tileColor = (int)type; // 0 = Black, 1 = White
-            
+
             int wallLevel = 0;
 
-            if(colindantTiles[0]?.type == this.type) // UP LEFT
+            if (colindantTiles[0]?.type == this.type) // UP LEFT
             {
                 wallLevel = 1;
                 sprites[tileColor].pathUL.enabled = true;
             }
-            if(colindantTiles[2]?.type == this.type) // UP RIGHT
+            if (colindantTiles[2]?.type == this.type) // UP RIGHT
             {
                 wallLevel = 1;
                 sprites[tileColor].pathUR.enabled = true;
             }
 
-            if(colindantTiles[6]?.type == this.type)  // DOWN LEFT
+            if (colindantTiles[6]?.type == this.type)  // DOWN LEFT
             {
                 wallLevel = 1;
                 sprites[tileColor].pathDL.enabled = true;
             }
-            if(colindantTiles[8]?.type == this.type)  // DOWN RIGHT
+            if (colindantTiles[8]?.type == this.type)  // DOWN RIGHT
             {
                 wallLevel = 1;
                 sprites[tileColor].pathDR.enabled = true;
             }
-            if(colindantTiles[1]?.type == this.type) // UP
+            if (colindantTiles[1]?.type == this.type) // UP
             {
                 wallLevel = 2;
             }
-            if(colindantTiles[7]?.type == this.type) // DOWN
+            if (colindantTiles[7]?.type == this.type) // DOWN
             {
                 wallLevel = 2;
                 sprites[tileColor].bridgeDown.enabled = true;
             }
-            if(colindantTiles[5]?.type == this.type) // RIGHT
+            if (colindantTiles[5]?.type == this.type) // RIGHT
             {
                 wallLevel = 2;
                 sprites[tileColor].bridgeLeft.enabled = true;
             }
-            if(colindantTiles[3]?.type == this.type)  // LEFT
+            if (colindantTiles[3]?.type == this.type)  // LEFT
             {
                 wallLevel = 2;
                 sprites[tileColor].bridgeRight.enabled = true;
             }
 
-            if(wallLevel == 2)
+            if (wallLevel == 2)
             {
                 sprites[tileColor].castle.enabled = true;
             }
-            else if(wallLevel == 1)
+            else if (wallLevel == 1)
             {
                 sprites[tileColor].tower.enabled = true;
             }
