@@ -38,12 +38,17 @@ public class Tile : MonoBehaviour
     private Transform _outBordersParent;
     [SerializeField]
     private Collider2D _clickCollider;
+    [SerializeField]
+    private ParticleSystem _smokeParticle;
+    [SerializeField]
+    private ParticleSystem _explosionParticle;
 
     public TileSprites[] sprites;
 
     [HideInInspector]
     public Vector2 boardPos;
     private BoardController _board;
+    private int structureLevel;
 
 
     public void Init(BoardController board, Vector2 boardPos)
@@ -100,6 +105,7 @@ public class Tile : MonoBehaviour
         else
         {
             type = TileType.Liberty;
+            structureLevel = 0;
 
             _outBordersParent.gameObject.SetActive(false);
 
@@ -178,6 +184,7 @@ public class Tile : MonoBehaviour
 
     private void UpdateEscombros(Tile t, TileType lastType)
     {
+        bool atLeastOneCapture = false;
         if(t.type == TileType.Liberty && lastType != TileType.Liberty)
         {
             for (int i = 0; i <= 1; i++)
@@ -185,6 +192,10 @@ public class Tile : MonoBehaviour
                 t.sprites[(int)lastType].escombros[i].enabled = t.boardPos.x % 2 == i;
                 t.sprites[(int)lastType].escombros[i].flipX = t.boardPos.y % 2 == i;
             }
+
+            _explosionParticle.Play();
+            atLeastOneCapture = true;
+            structureLevel = 0;
         }
         else
         {
@@ -193,6 +204,9 @@ public class Tile : MonoBehaviour
             t.sprites[1].escombros[0].enabled = false;
             t.sprites[1].escombros[1].enabled = false;
         }
+
+        if(atLeastOneCapture)
+            ShakeController.Instance.Shake(0.175f, 0.15f);
     }
 
     public void UpdateSprites(Tile t)
@@ -216,54 +230,54 @@ public class Tile : MonoBehaviour
             Tile[] colindantTiles = _board.GetColindantTiles(t);
             int tileColor = (int)type; // 0 = Black, 1 = White
 
-            int wallLevel = 0;
+            int newStructureLevel = 1;
 
             if (colindantTiles[0]?.type == this.type) // UP LEFT
             {
-                wallLevel = 1;
+                newStructureLevel = 2;
                 sprites[tileColor].pathUL.enabled = true;
             }
             if (colindantTiles[2]?.type == this.type) // UP RIGHT
             {
-                wallLevel = 1;
+                newStructureLevel = 2;
                 sprites[tileColor].pathUR.enabled = true;
             }
 
             if (colindantTiles[6]?.type == this.type)  // DOWN LEFT
             {
-                wallLevel = 1;
+                newStructureLevel = 2;
                 sprites[tileColor].pathDL.enabled = true;
             }
             if (colindantTiles[8]?.type == this.type)  // DOWN RIGHT
             {
-                wallLevel = 1;
+                newStructureLevel = 2;
                 sprites[tileColor].pathDR.enabled = true;
             }
             if (colindantTiles[1]?.type == this.type) // UP
             {
-                wallLevel = 2;
+                newStructureLevel = 3;
             }
             if (colindantTiles[7]?.type == this.type) // DOWN
             {
-                wallLevel = 2;
+                newStructureLevel = 3;
                 sprites[tileColor].bridgeDown.enabled = true;
             }
             if (colindantTiles[5]?.type == this.type) // RIGHT
             {
-                wallLevel = 2;
+                newStructureLevel = 3;
                 sprites[tileColor].bridgeLeft.enabled = true;
             }
             if (colindantTiles[3]?.type == this.type)  // LEFT
             {
-                wallLevel = 2;
+                newStructureLevel = 3;
                 sprites[tileColor].bridgeRight.enabled = true;
             }
 
-            if (wallLevel == 2)
+            if (newStructureLevel == 3)
             {
                 sprites[tileColor].castle.enabled = true;
             }
-            else if (wallLevel == 1)
+            else if (newStructureLevel == 2)
             {
                 sprites[tileColor].tower.enabled = true;
             }
@@ -271,6 +285,13 @@ public class Tile : MonoBehaviour
             {
                 sprites[tileColor].house.enabled = true;
             }
+
+            if(newStructureLevel > structureLevel)
+            {
+                _smokeParticle.Play();
+                ShakeController.Instance.Shake(0.05f, 0.08f);
+            }
+            structureLevel = newStructureLevel;
         }
     }
 }

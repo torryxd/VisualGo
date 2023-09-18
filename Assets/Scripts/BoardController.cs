@@ -70,7 +70,7 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        _cam.transform.position = new Vector3((float)size / 2 + 0.5f, (float)size / 2 + 0.5f, -10);
+        _cam.transform.position = new Vector3((float)size / 2f + 0.5f, (float)size / 2f, -10);
     }
 
     public void ClickTile(Tile tile)
@@ -81,8 +81,12 @@ public class BoardController : MonoBehaviour
 
     public void Confirm()
     {
-        PlaceAndDrawStone(_cursor.targetTile, turnType);
-        _cursor.HideCursor();
+        if(_cursor.targetTile != null)
+        {
+            PlaceAndDrawStone(_cursor.targetTile, turnType);
+            _cursor.HideCursor();
+            _cursor.targetTile = null;
+        }
     }
 
     private void NextTurn(bool firstTime = false)
