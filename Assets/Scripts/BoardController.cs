@@ -1,9 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 public class BoardController : MonoBehaviour
 {
@@ -250,6 +248,40 @@ public class BoardController : MonoBehaviour
                 Flood(x - 1, y, flowType, groupTiles); // LEFT
             }
         }
+    }
+
+    public Tile[] GetColindantTiles(Tile tile)
+    {
+        Vector2 tilePos = tile.boardPos;
+        Vector2[] adjacentTiles =
+        {
+            new Vector2(tilePos.x - 1, tilePos.y + 1), // UL
+            new Vector2(tilePos.x, tilePos.y + 1), // UP
+            new Vector2(tilePos.x + 1, tilePos.y + 1), // UR
+
+            new Vector2(tilePos.x + 1, tilePos.y), // RIGHT
+            tilePos, // THIS
+            new Vector2(tilePos.x - 1, tilePos.y),  // LEFT
+
+            new Vector2(tilePos.x - 1, tilePos.y - 1), // DL
+            new Vector2(tilePos.x, tilePos.y - 1), // DOWN
+            new Vector2(tilePos.x + 1, tilePos.y - 1)  // DR
+        };
+
+        Tile[] colindantTiles = new Tile[9];
+        for (int i = 0; i < colindantTiles.Length; i++)
+        {
+            if(tiles.ContainsKey(adjacentTiles[i]))
+            {
+                colindantTiles[i] = tiles[adjacentTiles[i]];
+            }
+            else
+            {
+                colindantTiles[i] = tile;
+            }
+        }
+
+        return colindantTiles;
     }
 
 }

@@ -1,18 +1,26 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public enum TileType
 {
-    //WhiteLiberty    =  -2,
-    //BlackLiberty    =  -1,
-    Liberty         =   0,
-    Black           =   1,
-    White           =   2,
+    Liberty         =   -1,
+    Black           =   0,
+    White           =   1,
+    //WhiteLiberty    =  2,
+    //BlackLiberty    =  3,
     Border          =   8,
+}
+
+[System.Serializable]
+public class TileSprites
+{
+    public SpriteRenderer castle;
+    public SpriteRenderer tower;
+    public SpriteRenderer house;
+    public SpriteRenderer bridgeDown, bridgeLeft, bridgeRight;
+    public SpriteRenderer pathUL, pathUR, pathDL, pathDR;
 }
 
 // CALCULAR 3 TIPOS DE GRUPO BLANCAS, NEGRAS, LIBERTADES BLANCAS, LIBERTADES NEGRAS || SI DENTRO DE UN GRUPO DE LIBERTADES NEGRAS HAY UNA LIBERTAD BLANCA, PARA DE SER GRUPO?
@@ -25,17 +33,16 @@ public class Tile : MonoBehaviour
     [SerializeField]
     private GameObject _highlight;
     [SerializeField]
-    private Transform _stonesParent;
-    [SerializeField]
     private Transform _tilesParent;
     [SerializeField]
     private Transform _outBordersParent;
     [SerializeField]
     private Collider2D _clickCollider;
 
+    public TileSprites[] sprites;
+
     [HideInInspector]
     public Vector2 boardPos;
-
     private BoardController _board;
 
 
@@ -66,10 +73,15 @@ public class Tile : MonoBehaviour
     public void ChangeType(TileType tileType)
     {
         type = tileType;
+        
+        // 1 2 3
+        // 4 5 6
+        // 7 8 9
 
-        for (int i = -2; i <= 2; i++)
+        Tile[] colindantTiles = _board.GetColindantTiles(this);
+        foreach(Tile t in colindantTiles)
         {
-            _stonesParent.GetChild(i+2).gameObject.SetActive(i == (int)tileType);
+            t?.UpdateSprites(t);
         }
     }
 
@@ -156,5 +168,84 @@ public class Tile : MonoBehaviour
         }
 
         return false;
+    }
+
+    private void UpdateSprites(Tile t)
+    {
+        foreach (TileSprites tileSprites in sprites)
+        {
+            tileSprites.bridgeDown.enabled = false;
+            tileSprites.bridgeRight.enabled = false;
+            tileSprites.bridgeLeft.enabled = false;
+            tileSprites.pathUL.enabled = false;
+            tileSprites.pathUR.enabled = false;
+            tileSprites.pathDL.enabled = false;
+            tileSprites.pathDR.enabled = false;
+            tileSprites.castle.enabled = false;
+            tileSprites.tower.enabled = false;
+            tileSprites.house.enabled = false;
+        }
+
+        if(type == TileType.Black || type == TileType.White)
+        {
+            Tile[] colindantTiles = _board.GetColindantTiles(t);
+            int tileColor = (int)type; // 0 = Black, 1 = White
+            
+            int wallLevel = 0;
+
+            if(colindantTiles[0]?.type == this.type) // UP LEFT
+            {
+                wallLevel = 1;
+                sprites[tileColor].pathUL.enabled = true;
+            }
+            if(colindantTiles[2]?.type == this.type) // UP RIGHT
+            {
+                wallLevel = 1;
+                sprites[tileColor].pathUR.enabled = true;
+            }
+
+            if(colindantTiles[6]?.type == this.type)  // DOWN LEFT
+            {
+                wallLevel = 1;
+                sprites[tileColor].pathDL.enabled = true;
+            }
+            if(colindantTiles[8]?.type == this.type)  // DOWN RIGHT
+            {
+                wallLevel = 1;
+                sprites[tileColor].pathDR.enabled = true;
+            }
+            if(colindantTiles[1]?.type == this.type) // UP
+            {
+                wallLevel = 2;
+            }
+            if(colindantTiles[7]?.type == this.type) // DOWN
+            {
+                wallLevel = 2;
+                sprites[tileColor].bridgeDown.enabled = true;
+            }
+            if(colindantTiles[5]?.type == this.type) // RIGHT
+            {
+                wallLevel = 2;
+                sprites[tileColor].bridgeLeft.enabled = true;
+            }
+            if(colindantTiles[3]?.type == this.type)  // LEFT
+            {
+                wallLevel = 2;
+                sprites[tileColor].bridgeRight.enabled = true;
+            }
+
+            if(wallLevel == 2)
+            {
+                sprites[tileColor].castle.enabled = true;
+            }
+            else if(wallLevel == 1)
+            {
+                sprites[tileColor].tower.enabled = true;
+            }
+            else
+            {
+                sprites[tileColor].house.enabled = true;
+            }
+        }
     }
 }
