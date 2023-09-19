@@ -39,7 +39,7 @@ public class CursorController : MonoBehaviour
         hideCursor = false;
         cursorSprite.color = Color.white;
         denySprite.color = transparentColor;
-        transform.localScale = Vector3.one * 1.2f;
+        transform.localScale = Vector3.one * 1.3f;
     }
 
     // Update is called once per frame
@@ -52,6 +52,6 @@ public class CursorController : MonoBehaviour
     {
         denySprite.color = Color.white;
         cursorSprite.color = transparentColor;
-        transform.localScale = Vector3.one * 1.2f;
+        transform.localScale = Vector3.one * 1.3f;
     }
 }
