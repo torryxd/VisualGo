@@ -7,9 +7,13 @@ public class CursorController : MonoBehaviour
     public float moveSpeed = 2;
     public float fadeSpeed = 5;
     [HideInInspector]
-    public Tile targetTile;
+    public Tile targetTile = null;
+    [HideInInspector]
+    public Tile overTile = null;
     public SpriteRenderer cursorSprite;
     public SpriteRenderer denySprite;
+    public AudioSource cursorSound;
+    public AudioSource denySound;
     private bool hideCursor = true;
     
     private Color transparentColor;
@@ -39,7 +43,12 @@ public class CursorController : MonoBehaviour
         hideCursor = false;
         cursorSprite.color = Color.white;
         denySprite.color = transparentColor;
-        transform.localScale = Vector3.one * 1.3f;
+        transform.localScale = Vector3.one * 1.5f;
+        if(cursorSound != null)
+        {
+            cursorSound.pitch = Random.Range(1.2f, 1.6f);
+            cursorSound.Play();
+        }
     }
 
     // Update is called once per frame
@@ -52,6 +61,11 @@ public class CursorController : MonoBehaviour
     {
         denySprite.color = Color.white;
         cursorSprite.color = transparentColor;
-        transform.localScale = Vector3.one * 1.3f;
+        transform.localScale = Vector3.one * 2f;
+        if(denySound != null)
+        {
+            denySound.pitch = Random.Range(1.2f, 1.4f);
+            denySound.Play();
+        }
     }
 }

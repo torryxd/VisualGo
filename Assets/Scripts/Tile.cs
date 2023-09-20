@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public enum TileType
@@ -42,6 +41,14 @@ public class Tile : MonoBehaviour
     private ParticleSystem _smokeParticle;
     [SerializeField]
     private ParticleSystem _explosionParticle;
+    [SerializeField]
+    private ParticleSystem _markParticle;
+    [SerializeField]
+    private AudioSource _smokeSound;
+    [SerializeField]
+    private AudioSource _explosionSound;
+    [SerializeField]
+    private Animator _structureAnim;
 
     public TileSprites[] sprites;
 
@@ -60,31 +67,41 @@ public class Tile : MonoBehaviour
         ChangeType(type);
     }
 
-    private void OnMouseEnter()
-    {
-        
-    }
-
-    private void OnMouseExit()
-    {
-        
-    }
-
     private void OnMouseDown()
     {
-        _board.ClickTile(this);
+        _board.DownTile(this);
+        _markParticle.Play();
+    }
+
+    private void OnMouseUp()
+    {
+        _board.UpTile(this);
     }
 
     public void ChangeType(TileType tileType)
     {
         TileType lastType = type;
         type = tileType;
+        int upgradedSprites = 0;
 
         Tile[] colindantTiles = _board.GetColindantTiles(this);
         foreach (Tile t in colindantTiles)
         {
-            t?.UpdateSprites(t);
+            if (t != null && t.UpdateSprites(t))
+            {
+                upgradedSprites++;
+            }
         }
+        if (upgradedSprites > 0)
+        {
+            ShakeController.Instance.Shake(0.075f, 0.1f);
+            if (!_smokeSound.isPlaying)
+            {
+                _smokeSound.pitch = Random.Range(1.2f, 1.5f);
+                _smokeSound.Play();
+            }
+        }
+
         UpdateEscombros(this, lastType);
     }
 
@@ -163,7 +180,7 @@ public class Tile : MonoBehaviour
 
     Vector2[] hoshiPoints9 = { new Vector2(3, 3), new Vector2(3, 7), new Vector2(5, 5), new Vector2(7, 3), new Vector2(7, 7) };
     Vector2[] hoshiPoints13 = { new Vector2(4, 4), new Vector2(4, 10), new Vector2(7, 7), new Vector2(10, 4), new Vector2(10, 10) };
-    Vector2[] hoshiPoints19 = { new Vector2(4, 4), new Vector2(4, 10), new Vector2(4, 16), new Vector2(10, 4), new Vector2(10, 10), new Vector2(10, 16), new Vector2(16, 4), new Vector2(16, 10) , new Vector2(16, 16) };
+    Vector2[] hoshiPoints19 = { new Vector2(4, 4), new Vector2(4, 10), new Vector2(4, 16), new Vector2(10, 4), new Vector2(10, 10), new Vector2(10, 16), new Vector2(16, 4), new Vector2(16, 10), new Vector2(16, 16) };
     private bool CheckHoshi(int boardSize, Vector2 pos)
     {
         if (boardSize == 9)
@@ -185,8 +202,9 @@ public class Tile : MonoBehaviour
     private void UpdateEscombros(Tile t, TileType lastType)
     {
         bool atLeastOneCapture = false;
-        if(t.type == TileType.Liberty && lastType != TileType.Liberty)
+        if (t.type == TileType.Liberty && lastType != TileType.Liberty)
         {
+            structureLevel = 0;
             for (int i = 0; i <= 1; i++)
             {
                 t.sprites[(int)lastType].escombros[i].enabled = t.boardPos.x % 2 == i;
@@ -195,7 +213,6 @@ public class Tile : MonoBehaviour
 
             _explosionParticle.Play();
             atLeastOneCapture = true;
-            structureLevel = 0;
         }
         else
         {
@@ -205,12 +222,21 @@ public class Tile : MonoBehaviour
             t.sprites[1].escombros[1].enabled = false;
         }
 
-        if(atLeastOneCapture)
+        if (atLeastOneCapture)
+        {
             ShakeController.Instance.Shake(0.175f, 0.15f);
+            if (!_explosionSound.isPlaying)
+            {
+                _smokeSound.pitch = Random.Range(0.9f, 1.1f);
+                _explosionSound.Play();
+            }
+        }
     }
 
-    public void UpdateSprites(Tile t)
+    public bool UpdateSprites(Tile t)
     {
+        bool upgradedSprite = false;
+
         foreach (TileSprites tileSprites in sprites)
         {
             tileSprites.bridgeDown.enabled = false;
@@ -286,12 +312,15 @@ public class Tile : MonoBehaviour
                 sprites[tileColor].house.enabled = true;
             }
 
-            if(newStructureLevel > structureLevel)
+            if (newStructureLevel > structureLevel)
             {
                 _smokeParticle.Play();
-                ShakeController.Instance.Shake(0.05f, 0.08f);
+                _structureAnim.SetTrigger("SquatchStretch");
+                upgradedSprite = true;
             }
             structureLevel = newStructureLevel;
         }
+
+        return upgradedSprite;
     }
 }

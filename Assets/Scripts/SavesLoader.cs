@@ -60,7 +60,7 @@ public class SavesLoader : MonoBehaviour
         string save;
         save = input.text;
 
-        string boardSizeStr = save.Substring(save.IndexOf("SZ[")+3, 3);
+        string boardSizeStr = save.Substring(save.IndexOf("SZ[") + 3, 3);
         boardSizeStr = boardSizeStr.Substring(0, boardSizeStr.IndexOf("]"));
         int newBoardSize = int.Parse(boardSizeStr);
         _board.CreateBoard(newBoardSize);
@@ -93,11 +93,13 @@ public class SavesLoader : MonoBehaviour
                 }
             }
         }
-           
-        foreach(Tile t in tiles)
+
+        foreach (Tile t in tiles)
         {
             t.UpdateSprites(t);
         }
+
+        ShakeController.Instance.Shake();
     }
 
     public char NumberToLetter(int i)

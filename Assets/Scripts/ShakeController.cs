@@ -5,7 +5,6 @@ using UnityEngine;
 public class ShakeController : MonoBehaviour
 {
 	private Vector3 originalPosition;
-	private bool originalPositionDefined = false;
 	public static ShakeController Instance { get; private set; }
 
 	private void Awake() 
@@ -27,8 +26,6 @@ public class ShakeController : MonoBehaviour
 		}
 		
 		if(magnitude > 0 && duration > 0){
-			if(originalPositionDefined)
-        		this.transform.position = originalPosition;
 			await justShake(magnitude, duration);
 		}
     }
@@ -50,7 +47,6 @@ public class ShakeController : MonoBehaviour
 	private async Task justShake(float magnitude, float duration) {
         float d = 0f;
 		originalPosition = this.transform.position;
-		originalPositionDefined = true;
 
         while (d < duration) {
             await Task.Yield();

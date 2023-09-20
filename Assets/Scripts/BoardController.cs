@@ -1,39 +1,40 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class BoardController : MonoBehaviour
 {
     public int size;
     public TileType turnType;
+    public CursorController cursor;
 
     [SerializeField]
     private Tile _tilePrefab;
     [SerializeField]
-    private Transform _cam;
+    private CamController _cam;
     [SerializeField]
     private SavesLoader _savesLoader;
-    [SerializeField]
-    private CursorController _cursor;
     [SerializeField]
     private Image[] _turnIndicator;
 
     [HideInInspector]
+    public Tile downTile;
+    [HideInInspector]
     public Dictionary<Vector2, Tile> tiles;
     private List<Tile> turnCapturedTiles;
 
-    //private List<Dictionary<Vector2, TileType>> tileMaps = new List<Dictionary<Vector2, TileType>>();
-    Dictionary<Vector2, TileType> tileMap;
+    private Dictionary<Vector2, TileType> tileMap;
 
 
     private void Start()
     {
+        //Application.targetFrameRate = 60;
         CreateBoard();
     }
 
-    private void ResetGrid()
+    public void ResetGrid()
     {
         if(tiles != null)
         {
@@ -70,22 +71,42 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        _cam.transform.position = new Vector3((float)size / 2f + 0.5f, (float)size / 2f, -10);
+        _cam.transform.position = new Vector3((float)size / 2f + 0.5f, (float)size / 2f + 0.3f, -10);
+        _cam.SetBoardCamera();
     }
 
-    public void ClickTile(Tile tile)
+    public void DownTile(Tile tile)
     {
-        _cursor.targetTile = tile;
-        _cursor.ClickAnimation();
+        if(!IsPointerOverUIObject())
+        {
+            downTile = tile;
+        }
+    }
+    public void UpTile(Tile tile)
+    {
+        if(tile.Equals(downTile) && !IsPointerOverUIObject())
+        {
+            SelectTile(tile);
+        }
+    }
+    public void SelectTile(Tile tile)
+    {
+        cursor.targetTile = tile;
+        cursor.ClickAnimation();
     }
 
     public void Confirm()
     {
-        if(_cursor.targetTile != null)
+        if(tiles == null)
         {
-            PlaceAndDrawStone(_cursor.targetTile, turnType);
-            _cursor.HideCursor();
-            _cursor.targetTile = null;
+            CreateBoard();
+        }
+
+        if(cursor.targetTile != null)
+        {
+            PlaceAndDrawStone(cursor.targetTile, turnType);
+            cursor.HideCursor();
+            cursor.targetTile = null;
         }
     }
 
@@ -138,7 +159,7 @@ public class BoardController : MonoBehaviour
         else
         {
             Debug.Log(placeStoneError);
-            _cursor.ClickAnimationDeny();
+            cursor.ClickAnimationDeny();
         }
 
         turnCapturedTiles?.Clear();
@@ -325,5 +346,15 @@ public class BoardController : MonoBehaviour
         }
 
         return colindantTiles;
+    }
+
+    public bool IsPointerOverUIObject()
+    {
+        PointerEventData eventDataCurrentPosition = new PointerEventData(EventSystem.current);
+        eventDataCurrentPosition.position = Input.mousePosition;
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
+
+        return results.Count > 0;
     }
 }
