@@ -3,12 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 
 public class BoardController : MonoBehaviour
 {
     public int size;
     public TileType turnType;
     public CursorController cursor;
+    public TextMeshProUGUI capturedBlackText;
+    public TextMeshProUGUI capturedWhiteText;
+    public TextMeshProUGUI scoreBlackText;
+    public TextMeshProUGUI scoreWhiteText;
+    public TextMeshProUGUI AIText;
 
     [SerializeField]
     private Tile _tilePrefab;
@@ -18,20 +24,34 @@ public class BoardController : MonoBehaviour
     private SavesLoader _savesLoader;
     [SerializeField]
     private Image[] _turnIndicator;
+    [SerializeField]
+    private GameAI ai;
 
     [HideInInspector]
     public Tile downTile;
     [HideInInspector]
     public Dictionary<Vector2, Tile> tiles;
-    private List<Tile> turnCapturedTiles;
+    [HideInInspector]
+    public List<Tile> turnCapturedTiles;
+    public int capturedBlack;
+    public int capturedWhite;
 
     private Dictionary<Vector2, TileType> tileMap;
+    [HideInInspector]
+    public bool iaEnabled = false;
 
 
-    private void Start()
+    private void Update()
     {
-        //Application.targetFrameRate = 60;
-        CreateBoard();
+        if(Input.GetKeyDown(KeyCode.Escape))
+        {
+            ConfirmWindow.Instance.Call(() => Application.Quit());
+        }
+    }
+
+    public void ResetButton(int size)
+    {
+        ConfirmWindow.Instance.Call(() => CreateBoard(size));
     }
 
     public void ResetGrid()
@@ -46,6 +66,25 @@ public class BoardController : MonoBehaviour
         tiles = new Dictionary<Vector2, Tile>();
         turnCapturedTiles = new List<Tile>();
         tileMap = new Dictionary<Vector2, TileType>();
+
+        capturedBlack = 0;
+        capturedWhite = 0;
+    }
+
+    public void UpdateScore()
+    {
+        Dictionary<Vector2, TileType> actualTileMap = new Dictionary<Vector2, TileType>();
+        foreach (KeyValuePair<Vector2, Tile> t in tiles)
+        {
+            actualTileMap[t.Key] = t.Value.type;
+        }
+
+        var puntuacion = ai.CalcularPuntuacion(actualTileMap);
+
+        scoreBlackText.text = puntuacion.puntuacionBlack.ToString();
+        scoreBlackText.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = puntuacion.puntuacionBlack.ToString();
+        scoreWhiteText.text = puntuacion.puntuacionWhite.ToString();
+        scoreWhiteText.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = puntuacion.puntuacionWhite.ToString();
     }
 
     public void CreateBoard(int givenSize = 0)
@@ -56,6 +95,7 @@ public class BoardController : MonoBehaviour
         NextTurn(true);
 
         ResetGrid();
+        _savesLoader.ClearGameSave();
 
         for (int x = 0; x <= (size + 1); x++)
         {
@@ -97,17 +137,23 @@ public class BoardController : MonoBehaviour
 
     public void Confirm()
     {
-        if(tiles == null)
-        {
-            CreateBoard();
-        }
-
         if(cursor.targetTile != null)
         {
             PlaceAndDrawStone(cursor.targetTile, turnType);
             cursor.HideCursor();
             cursor.targetTile = null;
         }
+    }
+
+    public void NextTurnButton()
+    {
+        ConfirmWindow.Instance.Call(() => NextTurn());
+    }
+
+    public void EnableIA(bool enable)
+    {
+        iaEnabled = enable;
+        AIText.gameObject.SetActive(enable);
     }
 
     private void NextTurn(bool firstTime = false)
@@ -123,6 +169,19 @@ public class BoardController : MonoBehaviour
             turnType = TileType.White;
             _turnIndicator[0].gameObject.SetActive(false);
             _turnIndicator[1].gameObject.SetActive(true);
+
+            if(iaEnabled)
+            {
+                Vector2 aiPlaceStone = ai.MakeMove(tileMap);
+                if(aiPlaceStone == Vector2.zero)
+                {
+                    NextTurn();
+                }
+                else
+                {
+                    PlaceAndDrawStone(tiles[aiPlaceStone], turnType);
+                }
+            }
         }
     }
 
@@ -140,7 +199,20 @@ public class BoardController : MonoBehaviour
                 {
                     foreach (Tile t in turnCapturedTiles)
                     {
-                        t.ChangeType(TileType.Liberty);
+                        if(!t.tileEscombrada)
+                        {
+                            t.ChangeType(TileType.Liberty);
+
+                            if(moveType == TileType.Black)
+                            {
+                                capturedBlack ++;
+                            }
+                            else if(moveType == TileType.White)
+                            {
+                                capturedWhite ++;
+                            }
+                            t.tileEscombrada = true;
+                        }
                     }
                 }
             }
@@ -150,19 +222,50 @@ public class BoardController : MonoBehaviour
 
                 foreach (Tile t in turnCapturedTiles)
                 {
-                    t.type = TileType.Liberty;
+                    if(!t.tileEscombrada)
+                    {
+                        t.ChangeType(TileType.Liberty);
+
+                        if(moveType == TileType.Black)
+                        {
+                            capturedBlack ++;
+                        }
+                        else if(moveType == TileType.White)
+                        {
+                            capturedWhite ++;
+                        }
+                        t.tileEscombrada = true;
+                    }
                 }
             }
+
+            if(moveType == TileType.Black)
+            {
+                capturedBlackText.text = capturedBlack.ToString();
+                capturedBlackText.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = capturedBlack.ToString();
+            }
+            else if(moveType == TileType.White)
+            {
+                capturedWhiteText.text = capturedWhite.ToString();
+                capturedWhiteText.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = capturedWhite.ToString();
+            }
+
+            foreach (Tile t in turnCapturedTiles)
+            {
+                t.tileEscombrada = false;
+            }
+
+            turnCapturedTiles?.Clear();
+
             NextTurn();
             _savesLoader.AddMoveToSave(tile.type, tile.boardPos);
         }
         else
         {
-            Debug.Log(placeStoneError);
+            turnCapturedTiles?.Clear();
+            Debug.Log(tile.boardPos + " | " + placeStoneError);
             cursor.ClickAnimationDeny();
         }
-
-        turnCapturedTiles?.Clear();
     }
 
     public string CanPlaceStone(Tile tile, TileType moveType)

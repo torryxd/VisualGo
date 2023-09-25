@@ -6,10 +6,11 @@ using UnityEngine;
 public class CamController : MonoBehaviour
 {
     public float zoomSpeed = 10f;
+    public float closeCursorSpeed = 20f;
     public float zoomSensibility = 10f;
     public float camSpeed = 5f;
     public float camSensitivity = 3f;
-    private float delayTime = 0.3f;
+    private float delayTime = 0.1f;
     private float delayCount = 0f;
 
     [SerializeField]
@@ -36,6 +37,8 @@ public class CamController : MonoBehaviour
     {
         maximumZoom = 3.5f;
         minimumZoom = ScalingZoomFunction(_board.size);
+        if(minimumZoom < maximumZoom)
+            maximumZoom = minimumZoom;
 
         limitBottomCorner = new Vector2(2f, 2f);
         float limit = _board.size - 1f;
@@ -116,11 +119,10 @@ public class CamController : MonoBehaviour
 
             touchStart = MousePoint();
         }
-        else if (Input.GetMouseButtonUp(0))
+        if(!_board.IsPointerOverUIObject())
         {
-            touchStart = MousePoint();
+            Zoom(Input.GetAxis("Mouse ScrollWheel"));
         }
-        Zoom(Input.GetAxis("Mouse ScrollWheel"));
 
         _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, desiredZoom, Time.deltaTime * zoomSpeed);
         _cam.transform.position = Vector3.Lerp(_cam.transform.position, desiredPos, Time.deltaTime * camSpeed);
@@ -128,6 +130,7 @@ public class CamController : MonoBehaviour
         if(delayCount > 0)
         {
             delayCount -= Time.deltaTime;
+            touchStart = MousePoint();
         }
     }
 
@@ -139,13 +142,19 @@ public class CamController : MonoBehaviour
     private void Zoom(float increment)
     {
         desiredZoom = Mathf.Clamp(desiredZoom - (increment * Time.deltaTime * zoomSensibility), maximumZoom, minimumZoom);
+        
+        if(increment > 0.001f)
+        {
+            Vector3 cursorPos = new Vector3(_board.cursor.transform.position.x, _board.cursor.transform.position.y, desiredPos.z);
+            desiredPos = Vector3.Lerp(desiredPos, cursorPos, Time.deltaTime * closeCursorSpeed);
+        }
+        else if (increment < -0.001f)
+        {
+            desiredPos = Vector3.Lerp(desiredPos, defaultCameraPos, Time.deltaTime * closeCursorSpeed);
+        }
+
         if(desiredZoom == minimumZoom)
             desiredPos = defaultCameraPos;
-
-        if(increment > 0.01f)
-        {
-            desiredPos = new Vector3(_board.cursor.transform.position.x, _board.cursor.transform.position.y, desiredPos.z);
-        }
     }
 
     private float ScalingZoomFunction(int x)

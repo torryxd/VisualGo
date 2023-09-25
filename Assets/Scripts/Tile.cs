@@ -54,6 +54,8 @@ public class Tile : MonoBehaviour
 
     [HideInInspector]
     public Vector2 boardPos;
+    [HideInInspector]
+    public bool tileEscombrada = false;
     private BoardController _board;
     private int structureLevel;
 
@@ -101,7 +103,7 @@ public class Tile : MonoBehaviour
                 _smokeSound.Play();
             }
         }
-
+        
         UpdateEscombros(this, lastType);
     }
 

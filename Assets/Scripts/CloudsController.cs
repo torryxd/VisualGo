@@ -38,13 +38,11 @@ public class CloudsController : MonoBehaviour
             {
                 goingRight[i] = false;
                 clouds[i].flipX = true;
-                clouds[i].GetComponentInChildren<SpriteRenderer>().flipX = true;
             }
             else if (clouds[i].transform.position.x < xLimitMin)
             {
                 goingRight[i] = true;
                 clouds[i].flipX = false;
-                clouds[i].GetComponentInChildren<SpriteRenderer>().flipX = false;
             }
         }
     }

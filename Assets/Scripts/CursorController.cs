@@ -61,7 +61,7 @@ public class CursorController : MonoBehaviour
     {
         denySprite.color = Color.white;
         cursorSprite.color = transparentColor;
-        transform.localScale = Vector3.one * 2f;
+        transform.localScale = Vector3.one * 1.75f;
         if(denySound != null)
         {
             denySound.pitch = Random.Range(1.2f, 1.4f);
